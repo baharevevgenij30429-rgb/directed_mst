@@ -3,23 +3,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Создаёт граф с n вершинами и m рёбрами
 Graph* graph_create(int n, int m) {
     Graph *g = (Graph*)malloc(sizeof(Graph));
-    g->n = n; g->m = m;
+    g->n = n;
+    g->m = m;
     g->edges = (Edge*)malloc(m * sizeof(Edge));
     return g;
 }
 
+// Освобождает память графа
 void graph_free(Graph *g) {
-    if (g) { free(g->edges); free(g); }
+    if (g) {
+        free(g->edges);
+        free(g);
+    }
 }
 
+// Добавляет ребро по индексу
 void graph_add_edge(Graph *g, int idx, int from, int to, long long w) {
     g->edges[idx].from = from;
     g->edges[idx].to = to;
     g->edges[idx].weight = w;
 }
 
+// Читает граф из текстового файла
 Graph* graph_read(const char *filename) {
     FILE *f = fopen(filename, "r");
     if (!f) return NULL;
@@ -35,6 +43,7 @@ Graph* graph_read(const char *filename) {
     return g;
 }
 
+// Записывает результат в файл
 void graph_write_result(const char *filename, long long total_cost, int *parent, int n, int root) {
     FILE *f = fopen(filename, "w");
     if (!f) return;
@@ -51,7 +60,7 @@ void graph_write_result(const char *filename, long long total_cost, int *parent,
     fclose(f);
 }
 
-// Проверка, что все вершины достижимы из корня (BFS)
+// Проверяет достижимость всех вершин из корня (обход в ширину)
 int graph_is_connected(Graph *g, int root) {
     int *visited = (int*)calloc(g->n, sizeof(int));
     int *queue = (int*)malloc(g->n * sizeof(int));
@@ -71,6 +80,7 @@ int graph_is_connected(Graph *g, int root) {
         adj[u][pos[u]++] = v;
     }
     
+    // Сам BFS
     while (head < tail) {
         int u = queue[head++];
         for (int i = 0; i < deg[u]; i++) {
@@ -82,6 +92,7 @@ int graph_is_connected(Graph *g, int root) {
         }
     }
     
+    // Проверяем, все ли посетили
     int ok = 1;
     for (int i = 0; i < g->n; i++) {
         if (!visited[i]) { ok = 0; break; }

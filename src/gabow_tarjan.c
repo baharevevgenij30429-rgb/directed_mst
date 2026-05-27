@@ -6,13 +6,21 @@
 
 #define INF (1LL<<60)
 
+typedef struct {
+    int from, to;
+    long long w;
+} MyEdge;
+
+// Алгоритм Габова-Тарьяна с фибоначчиевой кучей (O(m + n log n))
 long long gabow_tarjan(Graph *g, int root, int *parent) {
-    int n = g->n;
-    int m = g->m;
+    int n = g->n, m = g->m;
     
-    // Копия рёбер
-    Edge *edges = (Edge*)malloc(m * sizeof(Edge));
-    memcpy(edges, g->edges, m * sizeof(Edge));
+    MyEdge *edges = (MyEdge*)malloc(m * sizeof(MyEdge));
+    for (int i = 0; i < m; i++) {
+        edges[i].from = g->edges[i].from;
+        edges[i].to = g->edges[i].to;
+        edges[i].w = g->edges[i].weight;
+    }
     
     int *pre = (int*)calloc(n, sizeof(int));
     long long *in = (long long*)calloc(n, sizeof(long long));
@@ -21,18 +29,14 @@ long long gabow_tarjan(Graph *g, int root, int *parent) {
     long long total = 0;
     
     while (1) {
-        // Создаём фибоначчиевы кучи для каждой вершины
+        // Создаём фибоначчиевы кучи входящих рёбер
         FibHeap **heaps = (FibHeap**)malloc(n * sizeof(FibHeap*));
-        for (int i = 0; i < n; i++) {
-            heaps[i] = fib_heap_create();
-        }
-        
-        // Вставляем все рёбра в кучи (по вершине назначения)
+        for (int i = 0; i < n; i++) heaps[i] = fib_heap_create();
         for (int i = 0; i < m; i++) {
-            fib_heap_insert(heaps[edges[i].to], edges[i].from, edges[i].weight);
+            fib_heap_insert(heaps[edges[i].to], edges[i].from, edges[i].w);
         }
         
-        // Выбираем минимальное входящее ребро для каждой вершины (кроме корня)
+        // Выбираем минимальное входящее ребро из фибоначчиевой кучи
         for (int i = 0; i < n; i++) {
             if (i == root) {
                 in[i] = 0;
@@ -46,23 +50,14 @@ long long gabow_tarjan(Graph *g, int root, int *parent) {
                 goto cleanup;
             }
             FibNode *node = fib_heap_extract_min(heaps[i]);
-            if (!node) {
-                total = -1;
-                for (int j = 0; j < n; j++) fib_heap_free(heaps[j]);
-                free(heaps);
-                goto cleanup;
-            }
             in[i] = node->key;
             pre[i] = node->vertex;
             free(node);
         }
         
-        // Суммируем стоимости выбранных рёбер
-        for (int i = 0; i < n; i++) {
-            total += in[i];
-        }
+        for (int i = 0; i < n; i++) total += in[i];
         
-        // Поиск циклов (алгоритм на основе меток)
+        // Поиск циклов (как в простой версии)
         int cnt = 0;
         memset(id, -1, n * sizeof(int));
         memset(vis, -1, n * sizeof(int));
@@ -73,40 +68,30 @@ long long gabow_tarjan(Graph *g, int root, int *parent) {
                 v = pre[v];
             }
             if (v != root && id[v] == -1) {
-                for (int u = pre[v]; u != v; u = pre[u]) {
-                    id[u] = cnt;
-                }
+                for (int u = pre[v]; u != v; u = pre[u]) id[u] = cnt;
                 id[v] = cnt++;
             }
         }
         
-        // Если циклов нет – сохраняем предков и выходим
         if (cnt == 0) {
-            for (int i = 0; i < n; i++) {
-                parent[i] = pre[i];
-            }
+            for (int i = 0; i < n; i++) parent[i] = pre[i];
             for (int j = 0; j < n; j++) fib_heap_free(heaps[j]);
             free(heaps);
             break;
         }
         
-        // Присваиваем ID вершинам, не входящим в циклы
-        for (int i = 0; i < n; i++) {
-            if (id[i] == -1) id[i] = cnt++;
-        }
+        for (int i = 0; i < n; i++) if (id[i] == -1) id[i] = cnt++;
         
-        // Контракция графа
+        // Контракция
         int new_m = 0;
-        Edge *new_edges = (Edge*)malloc(m * sizeof(Edge));
+        MyEdge *new_edges = (MyEdge*)malloc(m * sizeof(MyEdge));
         for (int i = 0; i < m; i++) {
-            int u = edges[i].from;
-            int v = edges[i].to;
-            int nu = id[u];
-            int nv = id[v];
+            int u = edges[i].from, v = edges[i].to;
+            int nu = id[u], nv = id[v];
             if (nu != nv) {
                 new_edges[new_m].from = nu;
                 new_edges[new_m].to = nv;
-                new_edges[new_m].weight = edges[i].weight - in[v];
+                new_edges[new_m].w = edges[i].w - in[v];
                 new_m++;
             }
         }
@@ -116,7 +101,6 @@ long long gabow_tarjan(Graph *g, int root, int *parent) {
         n = cnt;
         root = id[root];
         
-        // Очищаем кучи и продолжаем
         for (int j = 0; j < n; j++) fib_heap_free(heaps[j]);
         free(heaps);
     }

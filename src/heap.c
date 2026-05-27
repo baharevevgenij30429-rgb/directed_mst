@@ -1,6 +1,7 @@
 #include "heap.h"
 #include <stdlib.h>
 
+// Создаёт кучу
 Heap* heap_create(int max_vertices) {
     Heap *h = (Heap*)malloc(sizeof(Heap));
     h->cap = max_vertices + 5;
@@ -11,13 +12,20 @@ Heap* heap_create(int max_vertices) {
     return h;
 }
 
-void heap_free(Heap *h) { free(h->data); free(h->pos); free(h); }
+// Освобождает память
+void heap_free(Heap *h) {
+    if (h) { free(h->data); free(h->pos); free(h); }
+}
+
+// Проверка на пустоту
 int heap_empty(Heap *h) { return h->size == 0; }
 
+// Поднимает элемент вверх по куче (восстановление свойства)
 static void heap_up(Heap *h, int idx) {
     while (idx > 0) {
         int p = (idx - 1) / 2;
         if (h->data[p].key <= h->data[idx].key) break;
+        // Обмен
         HeapNode tmp = h->data[p];
         h->data[p] = h->data[idx];
         h->data[idx] = tmp;
@@ -27,12 +35,14 @@ static void heap_up(Heap *h, int idx) {
     }
 }
 
+// Опускает элемент вниз по куче
 static void heap_down(Heap *h, int idx) {
     while (1) {
         int l = idx * 2 + 1, r = idx * 2 + 2, smallest = idx;
         if (l < h->size && h->data[l].key < h->data[smallest].key) smallest = l;
         if (r < h->size && h->data[r].key < h->data[smallest].key) smallest = r;
         if (smallest == idx) break;
+        // Обмен
         HeapNode tmp = h->data[idx];
         h->data[idx] = h->data[smallest];
         h->data[smallest] = tmp;
@@ -42,6 +52,7 @@ static void heap_down(Heap *h, int idx) {
     }
 }
 
+// Добавляет элемент в кучу
 void heap_push(Heap *h, int v, long long key) {
     h->data[h->size].vertex = v;
     h->data[h->size].key = key;
@@ -50,6 +61,19 @@ void heap_push(Heap *h, int v, long long key) {
     heap_up(h, h->size - 1);
 }
 
+// Уменьшает ключ элемента
+void heap_decrease_key(Heap *h, int v, long long new_key) {
+    int idx = h->pos[v];
+    if (idx == -1) {
+        heap_push(h, v, new_key);
+        return;
+    }
+    if (new_key >= h->data[idx].key) return;
+    h->data[idx].key = new_key;
+    heap_up(h, idx);
+}
+
+// Извлекает минимальный элемент
 HeapNode heap_pop(Heap *h) {
     HeapNode res = h->data[0];
     h->pos[res.vertex] = -1;

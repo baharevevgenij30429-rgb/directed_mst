@@ -3,40 +3,58 @@
 #include <string.h>
 #include <limits.h>
 
-#define INF (1LL<<60)
+#define INF (1LL<<60)  // "Бесконечность" для весов
 
+// Локальная структура ребра для удобства
+typedef struct {
+    int from, to;
+    long long w;
+} MyEdge;
+
+// Простой алгоритм Эдмондса (O(n·m))
 long long edmonds_simple(Graph *g, int root, int *parent) {
-    int n = g->n;
-    long long total = 0;
-    int *pre = (int*)malloc(n * sizeof(int));
-    long long *in = (long long*)malloc(n * sizeof(long long));
-    int *id = (int*)malloc(n * sizeof(int));
-    int *vis = (int*)malloc(n * sizeof(int));
+    int n = g->n, m = g->m;
     
-    Edge *edges = (Edge*)malloc(g->m * sizeof(Edge));
-    memcpy(edges, g->edges, g->m * sizeof(Edge));
-    int m = g->m;
+    // Копируем рёбра во временный массив
+    MyEdge *edges = (MyEdge*)malloc(m * sizeof(MyEdge));
+    for (int i = 0; i < m; i++) {
+        edges[i].from = g->edges[i].from;
+        edges[i].to = g->edges[i].to;
+        edges[i].w = g->edges[i].weight;
+    }
+    
+    int *pre = (int*)calloc(n, sizeof(int));   // предок в выбранном наборе
+    long long *in = (long long*)calloc(n, sizeof(long long)); // вес входящего ребра
+    int *id = (int*)malloc(n * sizeof(int));   // идентификатор сжатой вершины
+    int *vis = (int*)malloc(n * sizeof(int));  // метка для поиска циклов
+    long long total = 0;
     
     while (1) {
-        // find min incoming edge
+        // 1. Находим минимальное входящее ребро для каждой вершины
         for (int i = 0; i < n; i++) {
             if (i == root) {
-                in[i] = 0; pre[i] = root;
+                in[i] = 0;
+                pre[i] = root;
                 continue;
             }
-            in[i] = INF; pre[i] = -1;
+            in[i] = INF;
+            pre[i] = -1;
             for (int j = 0; j < m; j++) {
-                if (edges[j].to == i && edges[j].from != i && edges[j].weight < in[i]) {
-                    in[i] = edges[j].weight;
+                if (edges[j].to == i && edges[j].from != i && edges[j].w < in[i]) {
+                    in[i] = edges[j].w;
                     pre[i] = edges[j].from;
                 }
             }
-            if (pre[i] == -1) { total = -1; goto cleanup; }
+            if (pre[i] == -1) {  // нет входящего ребра → дерево построить нельзя
+                total = -1;
+                goto cleanup;
+            }
         }
         
+        // Добавляем веса выбранных рёбер к общей стоимости
         for (int i = 0; i < n; i++) total += in[i];
         
-        // find cycles
+        // 2. Поиск циклов в массиве предков
         int cnt = 0;
         memset(id, -1, n * sizeof(int));
         memset(vis, -1, n * sizeof(int));
@@ -47,27 +65,31 @@ long long edmonds_simple(Graph *g, int root, int *parent) {
                 v = pre[v];
             }
             if (v != root && id[v] == -1) {
+                // Нашли цикл: помечаем все вершины цикла одним id
                 for (int u = pre[v]; u != v; u = pre[u]) id[u] = cnt;
                 id[v] = cnt++;
             }
         }
+        
+        // 3. Если циклов нет — сохраняем результат
         if (cnt == 0) {
             for (int i = 0; i < n; i++) parent[i] = pre[i];
             break;
         }
+        
+        // Присваиваем id остальным вершинам
         for (int i = 0; i < n; i++) if (id[i] == -1) id[i] = cnt++;
         
-        // contract
+        // 4. Контракция графа (сжатие циклов в одну вершину)
         int new_m = 0;
-        Edge *new_edges = (Edge*)malloc(m * sizeof(Edge));
+        MyEdge *new_edges = (MyEdge*)malloc(m * sizeof(MyEdge));
         for (int i = 0; i < m; i++) {
             int u = edges[i].from, v = edges[i].to;
-            long long w = edges[i].weight;
             int nu = id[u], nv = id[v];
             if (nu != nv) {
                 new_edges[new_m].from = nu;
                 new_edges[new_m].to = nv;
-                new_edges[new_m].weight = w - in[v];
+                new_edges[new_m].w = edges[i].w - in[v];
                 new_m++;
             }
         }
@@ -79,6 +101,10 @@ long long edmonds_simple(Graph *g, int root, int *parent) {
     }
     
 cleanup:
-    free(pre); free(in); free(id); free(vis); free(edges);
+    free(edges);
+    free(pre);
+    free(in);
+    free(id);
+    free(vis);
     return total;
 }
