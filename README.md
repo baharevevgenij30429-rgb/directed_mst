@@ -38,9 +38,13 @@
 ## Сборка
 
 ```bash
-gcc -Wall -Wextra -O2 -Iinclude tests/test_all.c src/*.c -o test_all.exe ```
+gcc -Wall -Wextra -O2 -Iinclude tests/test_all.c src/*.c -o test_all.exe
+```
+
+## Запуск
 ```bash
-test_all.exe data/sample.gr 0```
+test_all.exe data/sample.gr 0
+```
 Где:
 data/sample.gr — путь к файлу с графом
 0 — номер корневой вершины (вершины нумеруются с 0)
