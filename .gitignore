@@ -1,0 +1,32 @@
+
+bin/
+obj/
+build/
+*.exe
+*.exe~
+*.o
+*.obj
+*.out
+
+output_*.txt
+
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.suo
+*.user
+
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+*.log
+*.tmp
+
+# Сгенерированные тестовые файлы (опционально)
+# data/generated_*.gr
